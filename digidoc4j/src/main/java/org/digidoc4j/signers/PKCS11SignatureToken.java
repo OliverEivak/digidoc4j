@@ -35,6 +35,8 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Implements PKCS#11 interface for Smart Cards and hardware tokens.
@@ -149,17 +151,31 @@ public class PKCS11SignatureToken implements SignatureToken  {
     return privateKeyEntry.getCertificate().getCertificate();
   }
 
+  /**
+   * Search for private key that matches the label and key usage.
+   * If no key is found, search by label only.
+   */
   private KSPrivateKeyEntry findPrivateKey(X509Cert.KeyUsage keyUsage) {
     logger.debug("Searching key by usage: " + keyUsage.name());
-    List<DSSPrivateKeyEntry> keys = getPrivateKeyEntries();
-    for (DSSPrivateKeyEntry key : keys) {
-      if (key.getCertificate().getCertificate().getKeyUsage()[keyUsage.ordinal()]) {
-        if (label == null || ((KSPrivateKeyEntry) key).getAlias().contains(label)) {
-          logger.debug("... Found key by keyUsage. Key encryption algorithm:" + key.getEncryptionAlgorithm().getName());
-          return (KSPrivateKeyEntry) key;
-        }
-      }
+
+    List<DSSPrivateKeyEntry> keys = getPrivateKeyEntries()
+            .stream()
+            .filter(k -> label == null || ((KSPrivateKeyEntry) k).getAlias().contains(label))
+            .collect(Collectors.toList());
+
+    Optional<DSSPrivateKeyEntry> keyWithKeyUsage = keys
+            .stream()
+            .filter(k -> k.getCertificate().getCertificate().getKeyUsage()[keyUsage.ordinal()])
+            .findFirst();
+
+    if (keyWithKeyUsage.isPresent()) {
+      logger.debug("Found key with key usage " + keyUsage);
+      return (KSPrivateKeyEntry) keyWithKeyUsage.get();
+    } else if (!keys.isEmpty()) {
+      logger.debug("No key found with key usage " + keyUsage + ", returning first key");
+      return (KSPrivateKeyEntry) keys.get(0);
     }
+
     throw new TechnicalException("Error getting private key entry!");
   }
 
