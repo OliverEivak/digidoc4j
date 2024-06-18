@@ -7,7 +7,7 @@
     <artifactId>digidoc4j</artifactId>
     <groupId>com.olivereivak</groupId>
     <packaging>jar</packaging>
-    <version>5.2.0-custom-2024-06-12-12-25</version>
+    <version>5.2.0-custom-2024-06-18-14-50</version>
 
     <name>DigiDoc4j</name>
     <description>DigiDoc4j is a Java library for digitally signing documents and creating digital signature containers

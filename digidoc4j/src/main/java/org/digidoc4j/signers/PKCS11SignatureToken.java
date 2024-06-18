@@ -156,12 +156,18 @@ public class PKCS11SignatureToken implements SignatureToken  {
    * If no key is found, search by label only.
    */
   private KSPrivateKeyEntry findPrivateKey(X509Cert.KeyUsage keyUsage) {
-    logger.debug("Searching key by usage: " + keyUsage.name());
+    logger.info("Searching key by usage: " + keyUsage.name());
+    logger.info("Label: " + label);
 
-    List<DSSPrivateKeyEntry> keys = getPrivateKeyEntries()
+    List<DSSPrivateKeyEntry> privateKeyEntries = getPrivateKeyEntries();
+    logger.info("There are " + privateKeyEntries.size() + " keys");
+    privateKeyEntries.forEach(k -> logger.info("Private key with alias: " + ((KSPrivateKeyEntry) k).getAlias()));
+
+    List<DSSPrivateKeyEntry> keys = privateKeyEntries
             .stream()
             .filter(k -> label == null || ((KSPrivateKeyEntry) k).getAlias().contains(label))
             .collect(Collectors.toList());
+    logger.info(keys.size() + " keys match label (or label is null)");
 
     Optional<DSSPrivateKeyEntry> keyWithKeyUsage = keys
             .stream()
@@ -169,11 +175,13 @@ public class PKCS11SignatureToken implements SignatureToken  {
             .findFirst();
 
     if (keyWithKeyUsage.isPresent()) {
-      logger.debug("Found key with key usage " + keyUsage);
+      logger.info("Found key with key usage " + keyUsage);
       return (KSPrivateKeyEntry) keyWithKeyUsage.get();
     } else if (!keys.isEmpty()) {
-      logger.debug("No key found with key usage " + keyUsage + ", returning first key");
+      logger.info("No key found with key usage " + keyUsage + ", returning first key");
       return (KSPrivateKeyEntry) keys.get(0);
+    } else {
+      logger.error("No key found");
     }
 
     throw new TechnicalException("Error getting private key entry!");
